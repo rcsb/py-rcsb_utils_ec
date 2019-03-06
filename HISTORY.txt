@@ -1,7 +1,5 @@
-# RCSB_UTILS_VALIDATION HISTORY
-14-Jan-2019 V0.10 Initial version
- 6-Feb-2019 V0.11 Remove references to MarshalUtil from schema and file reader classes.
-15-Feb-2019 V0.12 Add tests for exporting schema mapping data
+# RCSB_UTILS_EC HISTORY
+ 4-Mar-2019 V0.10 Initial version
 #
 
 

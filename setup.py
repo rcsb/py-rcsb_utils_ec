@@ -1,5 +1,5 @@
 # File: setup.py
-# Date: 23-Feb-2019
+# Date:  4-Mar-2019
 #
 # Updates:
 #
@@ -10,9 +10,9 @@ from setuptools import find_packages
 from setuptools import setup
 
 packages = []
-thisPackage = 'rcsb.utils.anal'
+thisPackage = 'rcsb.utils.ec'
 
-with open('rcsb/utils/anal/__init__.py', 'r') as fd:
+with open('rcsb/utils/ec/__init__.py', 'r') as fd:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
                         fd.read(), re.MULTILINE).group(1)
 
@@ -22,11 +22,11 @@ if not version:
 setup(
     name=thisPackage,
     version=version,
-    description='RCSB Python analysis and plotting utility classes',
+    description='RCSB Python utility classes for processing EC classification data',
     long_description="See:  README.md",
     author='John Westbrook',
     author_email='john.westbrook@rcsb.org',
-    url='https://github.com/rcsb/py-rcsb_utils_anal',
+    url='https://github.com/rcsb/py-rcsb_utils_ec',
     #
     license='Apache 2.0',
     classifiers=(
@@ -45,9 +45,11 @@ setup(
         'console_scripts': []
     },
     #
-    install_requires=['rcsb.utils.io >= 0.19',
-                      'rcsb.utils.config >= 0.15'],
-    packages=find_packages(exclude=['rcsb.mock-data', 'rcsb.utils.tests-anal', 'rcsb.utils.tests-*', 'tests.*']),
+    install_requires=['rcsb.utils.io >= 0.22',
+                      'rcsb.utils.config >= 0.16',
+                      'beautifulsoup4',
+                      'lxml'],
+    packages=find_packages(exclude=['rcsb.mock-data', 'rcsb.utils.tests-ec', 'rcsb.utils.tests-*', 'tests.*']),
     package_data={
         # If any package contains *.md or *.rst ...  files, include them:
         '': ['*.md', '*.rst', "*.txt", "*.cfg"],
