@@ -1,7 +1,7 @@
 ##
 # -*- coding: utf-8 -*-
 #
-# File:    EnzymeDatabaseReader.py
+# File:    EnzymeDatabaseUtils.py
 # Author:  J. Westbrook
 # Date:    24-Jan-2019
 # Version: 0.001
@@ -15,19 +15,16 @@ Various utilities for extracting data Enzyme database export data files
 and returning lineage details.
 """
 
-import contextlib
 import copy
 import gzip
 import logging
-import sys
+import os
 import time
 
-if sys.version_info[0] > 2:
-    import urllib.request as myurl
-else:
-    import urllib2 as myurl
-
 from bs4 import BeautifulSoup
+
+from rcsb.utils.io.FileUtil import FileUtil
+from rcsb.utils.io.MarshalUtil import MarshalUtil
 
 try:
     import xml.etree.cElementTree as ET
@@ -37,29 +34,76 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class EnzymeDatabaseReader(object):
+class EnzymeDatabaseUtils(object):
     """Various utilities for extracting data Enzyme database export data files
        and returning lineage details.
     """
 
     def __init__(self, **kwargs):
-        self.__kwargs = kwargs
-        self.__urlTarget = "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz"
+        #
+        urlTarget = kwargs.get('urlTarget', "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
+        enzymeDirPath = kwargs.get("enzymeDirPath", '.')
+        useCache = kwargs.get("useCache", True)
+        clearCache = kwargs.get("clearCache", False)
+        enzymeDataFileName = kwargs.get('enzymeDataFileName', 'enzyme-data.json')
 
-    def read(self, xmlFilePath):
-        """ Read input XML database dump file and return data transformed lineage data objects.
+        self.__debug = False
+        #
+        self.__mU = MarshalUtil(workPath=enzymeDirPath)
+        self.__enzD = self.__reload(urlTarget, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache, clearCache=clearCache)
+
+    def getClass(self, ecId):
+        try:
+            return self.__enzD['class'][ecId]
+        except Exception:
+            pass
+        return None
+
+    def getLineage(self, ecId):
+        try:
+            return self.__enzD['lineage'][ecId]
+        except Exception:
+            pass
+        return None
+
+    def __reload(self, urlTarget, dirPath, enzymeDataFileName, useCache=True, clearCache=False):
+        """ Reload input XML database dump file and return data transformed lineage data objects.
 '
         Returns:
             dictionary[ec_id] = {'name_list': ... , 'id_list': ... 'depth_list': ... }
         """
-        xrt = self.__parse(xmlFilePath)
-        # self.__traverse(xrt, ns="")
-        rD = self.__extract(xrt)
-        lD = self.__buildLineage(rD)
+        enzD = {}
+        #
+        fU = FileUtil()
+        fn = fU.getFileName(urlTarget)
+        xmlFilePath = os.path.join(dirPath, fn)
+        enzymeDataPath = os.path.join(dirPath, enzymeDataFileName)
+        #
+        if clearCache:
+            try:
+                os.remove(xmlFilePath)
+                os.remove(enzymeDataPath)
+            except Exception:
+                pass
+        #
+        if useCache and fU.exists(enzymeDataPath):
+            enzD = self.__mU.doImport(enzymeDataPath, format='json')
+        else:
+            if useCache and fU.exists(xmlFilePath):
+                logger.debug("Using an existing resource file %s" % xmlFilePath)
+                ok = True
+            else:
+                ok = fU.get(urlTarget, xmlFilePath)
+            if ok:
+                xrt = self.__parse(xmlFilePath)
+                if self.__debug:
+                    self.__traverse(xrt, ns="")
+                rD = self.__extract(xrt)
+                enzD = self.__build(rD)
+                ok = self.__mU.doExport(enzymeDataPath, enzD, format='json')
+        return enzD
 
-        return lD
-
-    def __buildLineage(self, rD):
+    def __build(self, rD):
         """  Build the list of ancestory classifiers for each leaf classifier.
 
         Source enzyme database exported data has the following organization:
@@ -101,19 +145,19 @@ class EnzymeDatabaseReader(object):
             dictionary[ec_id] = {'name_list': ... , 'id_list': ... 'depth_list': ... }
 
         """
-        lD = {}
-        #
+        linD = {}
         cD = {}
-        dspD = {}
+        classD = {}
+        #
         if 'class' in rD:
             for d in rD['class']:
                 clTup = tuple([d[at] for at in ['class', 'subclass', 'subsubclass']])
                 val = self.__stripMarkup(d['heading'])
                 cD[clTup] = val
-                dspD['.'.join(clTup)] = val
+                classD['.'.join(clTup)] = val
 
-        for k in sorted(dspD):
-            logger.debug("%10s %s" % (k, dspD[k]))
+        for k in sorted(classD):
+            logger.debug("%10s %s" % (k, classD[k]))
         #
         if 'entry' in rD:
             for d in rD['entry']:
@@ -142,16 +186,19 @@ class EnzymeDatabaseReader(object):
                         logger.debug("Missing accepted name data for %s" % '.'.join(cL))
                     else:
                         serialValue = self.__stripMarkup(serialValue)
+                        classD['.'.join(cL)] = serialValue
 
                     nmL = [classVal, subClassVal, subsubClassVal, serialValue]
-                    depthL = [0, 1, 2, 3]
-                    lD['.'.join(cL)] = {'name_list': nmL, 'id_list': idL, 'depth_list': depthL}
+                    depthL = [1, 2, 3, 4]
+                    # linD['.'.join(cL)] = {'name_list': nmL, 'id_list': idL, 'depth_list': depthL}
+                    linD['.'.join(cL)] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(4)]
                 except Exception as e:
                     logger.error("cL %r cParent %r scParent %r sscParent %r val %r" % (cL, cParent, scParent, sscParent, val))
                     logger.error("d is %r" % (d))
                     logger.error("Failing with %s" % str(e))
         #
-        return lD
+        enzD = {"class": classD, 'lineage': linD}
+        return enzD
 
     def __extract(self, xrt):
         """ Extract data from the input document and return a dictionary
@@ -221,7 +268,7 @@ class EnzymeDatabaseReader(object):
 
     def __stripMarkup(self, text):
         try:
-            tS = text.replace("&#151;", "-").replace("&amp;#151;", "-").replace(r'''â€”''', "-")
+            tS = text.replace("&#151;", "-").replace("&amp;#151;", "-").replace(u'â€”', "-")
             self.__bs = BeautifulSoup(tS, features="lxml")
             return self.__bs.get_text()
         except Exception as e:
@@ -279,23 +326,3 @@ class EnzymeDatabaseReader(object):
                             logger.info("-- -- -- -- -->  %r %r" % (gggchEl, gggch.attrib))
                             if gggch.text is not None and not len(gggch.text):
                                 logger.info("-- -- -- -- -->  %s" % gggch.text)
-
-    def fetch(self, filePath):
-        return self.__fetchUrl(self.__urlTarget, filePath)
-
-    def __fetchUrl(self, url, filePath):
-        try:
-            with open(filePath, 'wb') as out_file:
-                # with contextlib.closing(urllib.request.urlopen(url)) as fp:
-                with contextlib.closing(myurl.urlopen(url)) as fp:
-                    block_size = 1024 * 8
-                    while True:
-                        block = fp.read(block_size)
-                        if not block:
-                            break
-                        out_file.write(block)
-            return True
-        except Exception as e:
-            logger.exception("Failing for %s with %s" % (filePath, str(e)))
-
-        return False

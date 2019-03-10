@@ -45,8 +45,7 @@ setup(
         'console_scripts': []
     },
     #
-    install_requires=['rcsb.utils.io >= 0.22',
-                      'rcsb.utils.config >= 0.16',
+    install_requires=['rcsb.utils.io >= 0.25',
                       'beautifulsoup4',
                       'lxml'],
     packages=find_packages(exclude=['rcsb.mock-data', 'rcsb.utils.tests-ec', 'rcsb.utils.tests-*', 'tests.*']),

@@ -1,5 +1,5 @@
 # RCSB_UTILS_EC HISTORY
- 4-Mar-2019 V0.10 Initial version
+ 10-Mar-2019 V0.10 Initial package version
 #
 
 
