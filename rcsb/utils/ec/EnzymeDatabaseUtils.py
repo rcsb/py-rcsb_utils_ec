@@ -15,6 +15,7 @@ Various utilities for extracting data Enzyme database export data files
 and returning lineage details.
 """
 
+import collections
 import copy
 import gzip
 import logging
@@ -50,7 +51,12 @@ class EnzymeDatabaseUtils(object):
         self.__debug = False
         #
         self.__mU = MarshalUtil(workPath=enzymeDirPath)
-        self.__enzD = self.__reload(urlTarget, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache, clearCache=clearCache)
+        self.__enzD = self.__reload(
+            urlTarget,
+            enzymeDirPath,
+            enzymeDataFileName=enzymeDataFileName,
+            useCache=useCache,
+            clearCache=clearCache)
 
     def getClass(self, ecId):
         try:
@@ -66,6 +72,9 @@ class EnzymeDatabaseUtils(object):
             pass
         return None
 
+    def getTreeNodeList(self):
+        treeL = self.__exportTreeNodeList(enzD)
+
     def __reload(self, urlTarget, dirPath, enzymeDataFileName, useCache=True, clearCache=False):
         """ Reload input XML database dump file and return data transformed lineage data objects.
 '
@@ -78,6 +87,7 @@ class EnzymeDatabaseUtils(object):
         fn = fU.getFileName(urlTarget)
         xmlFilePath = os.path.join(dirPath, fn)
         enzymeDataPath = os.path.join(dirPath, enzymeDataFileName)
+        #
         #
         if clearCache:
             try:
@@ -100,7 +110,7 @@ class EnzymeDatabaseUtils(object):
                     self.__traverse(xrt, ns="")
                 rD = self.__extract(xrt)
                 enzD = self.__build(rD)
-                ok = self.__mU.doExport(enzymeDataPath, enzD, format='json')
+                ok = self.__mU.doExport(enzymeDataPath, enzD, format='json', indent=3)
         return enzD
 
     def __build(self, rD):
@@ -156,13 +166,45 @@ class EnzymeDatabaseUtils(object):
                 cD[clTup] = val
                 classD['.'.join(clTup)] = val
 
+            for ecId in classD:
+                cL = ecId.split('.')
+                #
+                tt = cL
+                sscParent = tuple(tt)
+                tt = cL[:-1]
+                tt.append("0")
+                scParent = tuple(tt)
+                tt = cL[:-2]
+                tt.extend(["0", "0"])
+                cParent = tuple(tt)
+                #
+                try:
+                    idL = ['.'.join(cL[:-2]), '.'.join(cL[:-1]), '.'.join(cL)]
+                    classVal = cD[cParent] if cParent in cD else ''
+                    subClassVal = cD[scParent] if scParent in cD else ''
+                    subsubClassVal = cD[sscParent] if sscParent in cD else ''
+                    nmL = [classVal, subClassVal, subsubClassVal]
+                    depthL = [1, 2, 3]
+                    #
+                    logger.info("%s idL %r" % (ecId, idL))
+                    logger.info("%s nmL %r" % (ecId, nmL))
+                    fL = [t for t in cL if t != '0']
+                    fLen = len(fL)
+                    for jj in range(1, fLen + 1):
+                        tId = '.'.join(cL[:jj])
+                        if tId not in linD:
+                            linD[tId] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(jj)]
+                            logger.info("%s %r" % (tId, linD[tId]))
+                except Exception as e:
+                    logger.exception("Failing with %s" % str(e))
+
         for k in sorted(classD):
             logger.debug("%10s %s" % (k, classD[k]))
         #
         if 'entry' in rD:
             for d in rD['entry']:
                 if 'serial' not in d:
-                    logger.error("Missing serial fieled in %r" % d)
+                    logger.error("Missing serial field in %r" % d)
                     continue
                 cL = list([d[at] for at in ['class', 'subclass', 'subsubclass', 'serial']])
                 #
@@ -191,14 +233,80 @@ class EnzymeDatabaseUtils(object):
                     nmL = [classVal, subClassVal, subsubClassVal, serialValue]
                     depthL = [1, 2, 3, 4]
                     # linD['.'.join(cL)] = {'name_list': nmL, 'id_list': idL, 'depth_list': depthL}
-                    linD['.'.join(cL)] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(4)]
+                    for jj in range(1, 5):
+                        ecId = '.'.join(cL[:jj])
+                        if ecId not in linD:
+                            linD[ecId] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(jj)]
+
                 except Exception as e:
                     logger.error("cL %r cParent %r scParent %r sscParent %r val %r" % (cL, cParent, scParent, sscParent, val))
                     logger.error("d is %r" % (d))
                     logger.error("Failing with %s" % str(e))
         #
-        enzD = {"class": classD, 'lineage': linD}
+        # strip 0 placeholders
+        #
+        rD = {}
+        for ky in classD:
+            ff = [t for t in ky.split('.') if t != '0']
+            rD['.'.join(ff)] = classD[ky]
+
+        #
+        enzD = {"class": rD, 'lineage': linD}
         return enzD
+
+    def __exportTreeNodeList(self, enzD):
+        """
+        """
+        # create parent dictionary
+        #
+        pL = []
+        pD = {}
+        for ecId in enzD['class']:
+            ff = ecId.split('.')
+            if len(ff) == 1:
+                pEcId = None
+                pL.append(ecId)
+            else:
+                pEcId = '.'.join(ff[:-1])
+            logger.info("ecId %s parent %s" % (ecId, pEcId))
+            pD[ecId] = pEcId
+        #
+        logger.info("enzD %d pD %d" % (len(enzD['class']), len(pD)))
+        cD = {}
+        for cEcId, pEcId in pD.items():
+            cD.setdefault(pEcId, []).append(cEcId)
+        #
+        logger.info("cD %d" % len(cD))
+        #
+        idL = []
+        for rootId in sorted(pL):
+            visited = set([rootId])
+            queue = collections.deque(visited)
+            while queue:
+                ecId = queue.popleft()
+                idL.append(ecId)
+                if ecId not in cD:
+                    logger.info("No children for ecId %s" % ecId)
+                    continue
+                for childId in cD[ecId]:
+                    if childId not in visited:
+                        queue.append(childId)
+                        visited.add(childId)
+        #
+        dL = []
+        for ecId in idL:
+            displayName = enzD['class'][ecId]
+            pEcId = pD[ecId]
+            if pEcId is None:
+                lL = []
+            else:
+                lL = [t[1] for t in enzD['lineage'][ecId]]
+
+            #
+            d = {'id': ecId, 'name': displayName, 'lineage': lL, 'parents': [pEcId], 'depth': len(lL)}
+            dL.append(d)
+
+        return dL
 
     def __extract(self, xrt):
         """ Extract data from the input document and return a dictionary
