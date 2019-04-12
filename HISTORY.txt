@@ -1,6 +1,7 @@
 # RCSB_UTILS_EC HISTORY
  10-Mar-2019 V0.10 Initial package version
   6-Apr-2019 V0.11 add mode tree list generation
+ 10-Apr-2019 V0.12 supress verbose logging
 #
 
 

@@ -51,12 +51,10 @@ class EnzymeDatabaseUtils(object):
         self.__debug = False
         #
         self.__mU = MarshalUtil(workPath=enzymeDirPath)
-        self.__enzD = self.__reload(
-            urlTarget,
-            enzymeDirPath,
-            enzymeDataFileName=enzymeDataFileName,
-            useCache=useCache,
-            clearCache=clearCache)
+        self.__enzD = self.__reload(urlTarget, enzymeDirPath,
+                                    enzymeDataFileName=enzymeDataFileName,
+                                    useCache=useCache,
+                                    clearCache=clearCache)
 
     def getClass(self, ecId):
         try:
@@ -73,7 +71,8 @@ class EnzymeDatabaseUtils(object):
         return None
 
     def getTreeNodeList(self):
-        treeL = self.__exportTreeNodeList(enzD)
+        treeL = self.__exportTreeNodeList(self.__enzD)
+        return treeL
 
     def __reload(self, urlTarget, dirPath, enzymeDataFileName, useCache=True, clearCache=False):
         """ Reload input XML database dump file and return data transformed lineage data objects.
@@ -186,15 +185,15 @@ class EnzymeDatabaseUtils(object):
                     nmL = [classVal, subClassVal, subsubClassVal]
                     depthL = [1, 2, 3]
                     #
-                    logger.info("%s idL %r" % (ecId, idL))
-                    logger.info("%s nmL %r" % (ecId, nmL))
+                    logger.debug("%s idL %r" % (ecId, idL))
+                    logger.debug("%s nmL %r" % (ecId, nmL))
                     fL = [t for t in cL if t != '0']
                     fLen = len(fL)
                     for jj in range(1, fLen + 1):
                         tId = '.'.join(cL[:jj])
                         if tId not in linD:
                             linD[tId] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(jj)]
-                            logger.info("%s %r" % (tId, linD[tId]))
+                            logger.debug("%s %r" % (tId, linD[tId]))
                 except Exception as e:
                     logger.exception("Failing with %s" % str(e))
 
@@ -268,7 +267,7 @@ class EnzymeDatabaseUtils(object):
                 pL.append(ecId)
             else:
                 pEcId = '.'.join(ff[:-1])
-            logger.info("ecId %s parent %s" % (ecId, pEcId))
+            logger.debug("ecId %s parent %s" % (ecId, pEcId))
             pD[ecId] = pEcId
         #
         logger.info("enzD %d pD %d" % (len(enzD['class']), len(pD)))
@@ -286,7 +285,7 @@ class EnzymeDatabaseUtils(object):
                 ecId = queue.popleft()
                 idL.append(ecId)
                 if ecId not in cD:
-                    logger.info("No children for ecId %s" % ecId)
+                    logger.debug("No children for ecId %s" % ecId)
                     continue
                 for childId in cD[ecId]:
                     if childId not in visited:
