@@ -296,13 +296,14 @@ class EnzymeDatabaseUtils(object):
         for ecId in idL:
             displayName = enzD['class'][ecId]
             pEcId = pD[ecId]
-            if pEcId is None:
-                lL = []
-            else:
-                lL = [t[1] for t in enzD['lineage'][ecId]]
+
+            lL = [t[1] for t in enzD['lineage'][ecId]]
 
             #
-            d = {'id': ecId, 'name': displayName, 'lineage': lL, 'parents': [pEcId], 'depth': len(lL)}
+            if pEcId is None:
+                d = {'id': ecId, 'name': displayName, 'depth': 0}
+            else:
+                d = {'id': ecId, 'name': displayName, 'parents': [pEcId], 'depth': len(lL) - 1}
             dL.append(d)
 
         return dL
