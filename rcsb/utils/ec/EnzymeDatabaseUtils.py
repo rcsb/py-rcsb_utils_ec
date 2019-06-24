@@ -42,30 +42,27 @@ class EnzymeDatabaseUtils(object):
 
     def __init__(self, **kwargs):
         #
-        urlTarget = kwargs.get('urlTarget', "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
-        enzymeDirPath = kwargs.get("enzymeDirPath", '.')
+        urlTarget = kwargs.get("urlTarget", "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
+        enzymeDirPath = kwargs.get("enzymeDirPath", ".")
         useCache = kwargs.get("useCache", True)
         clearCache = kwargs.get("clearCache", False)
-        enzymeDataFileName = kwargs.get('enzymeDataFileName', 'enzyme-data.json')
+        enzymeDataFileName = kwargs.get("enzymeDataFileName", "enzyme-data.json")
 
         self.__debug = False
         #
         self.__mU = MarshalUtil(workPath=enzymeDirPath)
-        self.__enzD = self.__reload(urlTarget, enzymeDirPath,
-                                    enzymeDataFileName=enzymeDataFileName,
-                                    useCache=useCache,
-                                    clearCache=clearCache)
+        self.__enzD = self.__reload(urlTarget, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache, clearCache=clearCache)
 
     def getClass(self, ecId):
         try:
-            return self.__enzD['class'][ecId]
+            return self.__enzD["class"][ecId]
         except Exception:
             pass
         return None
 
     def getLineage(self, ecId):
         try:
-            return self.__enzD['lineage'][ecId]
+            return self.__enzD["lineage"][ecId]
         except Exception:
             pass
         return None
@@ -96,12 +93,13 @@ class EnzymeDatabaseUtils(object):
                 pass
         #
         if useCache and fU.exists(enzymeDataPath):
-            enzD = self.__mU.doImport(enzymeDataPath, format='json')
+            enzD = self.__mU.doImport(enzymeDataPath, fmt="json")
         else:
             if useCache and fU.exists(xmlFilePath):
-                logger.debug("Using an existing resource file %s" % xmlFilePath)
+                logger.info("Using an existing resource file %s", xmlFilePath)
                 ok = True
             else:
+                logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
                 ok = fU.get(urlTarget, xmlFilePath)
             if ok:
                 xrt = self.__parse(xmlFilePath)
@@ -109,7 +107,7 @@ class EnzymeDatabaseUtils(object):
                     self.__traverse(xrt, ns="")
                 rD = self.__extract(xrt)
                 enzD = self.__build(rD)
-                ok = self.__mU.doExport(enzymeDataPath, enzD, format='json', indent=3)
+                ok = self.__mU.doExport(enzymeDataPath, enzD, fmt="json", indent=3)
         return enzD
 
     def __build(self, rD):
@@ -135,7 +133,7 @@ class EnzymeDatabaseUtils(object):
                     "reaction": "(1) a primary alcohol + NAD+ = an aldehyde + NADH + H+;;(2) a secondary alcohol + NAD+ = a ketone + NADH + H+",
                     "other_names": "aldehyde reductase; ADH; alcohol dehydrogenase (NAD); aliphatic alcohol dehydrogenase; ethanol dehydrogenase; NAD-dependent alcohol dehydrogenase;",
                     "sys_name": "alcohol:NAD+ oxidoreductase",
-                    "comments": "A zinc protein. Acts on primary or secondary alcohols or hemi-acetals with very broad specificity; however the enzyme oxidizes methanol much more poorly than ethanol. ",
+                    "comments": "A zinc protein. Acts on primary or secondary alcohols or hemi-acetals with very broad specificity; however the enzyme oxidizes ..... ",
                     "links": "BRENDA, EXPASY, GTD, IUBMB, KEGG, PDB, UM-BBD",
                     "class": "1",
                     "subclass": "1",
@@ -158,15 +156,15 @@ class EnzymeDatabaseUtils(object):
         cD = {}
         classD = {}
         #
-        if 'class' in rD:
-            for d in rD['class']:
-                clTup = tuple([d[at] for at in ['class', 'subclass', 'subsubclass']])
-                val = self.__stripMarkup(d['heading'])
+        if "class" in rD:
+            for dD in rD["class"]:
+                clTup = tuple([dD[at] for at in ["class", "subclass", "subsubclass"]])
+                val = self.__stripMarkup(dD["heading"])
                 cD[clTup] = val
-                classD['.'.join(clTup)] = val
+                classD[".".join(clTup)] = val
 
             for ecId in classD:
-                cL = ecId.split('.')
+                cL = ecId.split(".")
                 #
                 tt = cL
                 sscParent = tuple(tt)
@@ -178,34 +176,34 @@ class EnzymeDatabaseUtils(object):
                 cParent = tuple(tt)
                 #
                 try:
-                    idL = ['.'.join(cL[:-2]), '.'.join(cL[:-1]), '.'.join(cL)]
-                    classVal = cD[cParent] if cParent in cD else ''
-                    subClassVal = cD[scParent] if scParent in cD else ''
-                    subsubClassVal = cD[sscParent] if sscParent in cD else ''
+                    idL = [".".join(cL[:-2]), ".".join(cL[:-1]), ".".join(cL)]
+                    classVal = cD[cParent] if cParent in cD else ""
+                    subClassVal = cD[scParent] if scParent in cD else ""
+                    subsubClassVal = cD[sscParent] if sscParent in cD else ""
                     nmL = [classVal, subClassVal, subsubClassVal]
                     depthL = [1, 2, 3]
                     #
-                    logger.debug("%s idL %r" % (ecId, idL))
-                    logger.debug("%s nmL %r" % (ecId, nmL))
-                    fL = [t for t in cL if t != '0']
+                    logger.debug("%s idL %r", ecId, idL)
+                    logger.debug("%s nmL %r", ecId, nmL)
+                    fL = [t for t in cL if t != "0"]
                     fLen = len(fL)
                     for jj in range(1, fLen + 1):
-                        tId = '.'.join(cL[:jj])
+                        tId = ".".join(cL[:jj])
                         if tId not in linD:
                             linD[tId] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(jj)]
-                            logger.debug("%s %r" % (tId, linD[tId]))
+                            logger.debug("%s %r", tId, linD[tId])
                 except Exception as e:
-                    logger.exception("Failing with %s" % str(e))
+                    logger.exception("Failing with %s", str(e))
 
         for k in sorted(classD):
-            logger.debug("%10s %s" % (k, classD[k]))
+            logger.debug("%10s %s", k, classD[k])
         #
-        if 'entry' in rD:
-            for d in rD['entry']:
-                if 'serial' not in d:
-                    logger.error("Missing serial field in %r" % d)
+        if "entry" in rD:
+            for dD in rD["entry"]:
+                if "serial" not in dD:
+                    logger.error("Missing serial field in %r", dD)
                     continue
-                cL = list([d[at] for at in ['class', 'subclass', 'subsubclass', 'serial']])
+                cL = list([dD[at] for at in ["class", "subclass", "subsubclass", "serial"]])
                 #
                 tt = cL[:-1]
                 sscParent = tuple(tt)
@@ -217,40 +215,40 @@ class EnzymeDatabaseUtils(object):
                 cParent = tuple(tt)
                 #
                 try:
-                    idL = ['.'.join(cL[:-3]), '.'.join(cL[:-2]), '.'.join(cL[:-1]), '.'.join(cL)]
-                    classVal = cD[cParent] if cParent in cD else ''
-                    subClassVal = cD[scParent] if scParent in cD else ''
-                    subsubClassVal = cD[sscParent] if sscParent in cD else ''
-                    serialValue = d['accepted_name'] if 'accepted_name' in d else ''
-                    if serialValue is None or len(serialValue) < 1:
-                        serialValue = ''
-                        logger.debug("Missing accepted name data for %s" % '.'.join(cL))
+                    idL = [".".join(cL[:-3]), ".".join(cL[:-2]), ".".join(cL[:-1]), ".".join(cL)]
+                    classVal = cD[cParent] if cParent in cD else ""
+                    subClassVal = cD[scParent] if scParent in cD else ""
+                    subsubClassVal = cD[sscParent] if sscParent in cD else ""
+                    serialValue = dD["accepted_name"] if "accepted_name" in dD else ""
+                    if serialValue is None or not serialValue:
+                        serialValue = ""
+                        logger.debug("Missing accepted name data for %s", ".".join(cL))
                     else:
                         serialValue = self.__stripMarkup(serialValue)
-                        classD['.'.join(cL)] = serialValue
+                        classD[".".join(cL)] = serialValue
 
                     nmL = [classVal, subClassVal, subsubClassVal, serialValue]
                     depthL = [1, 2, 3, 4]
                     # linD['.'.join(cL)] = {'name_list': nmL, 'id_list': idL, 'depth_list': depthL}
                     for jj in range(1, 5):
-                        ecId = '.'.join(cL[:jj])
+                        ecId = ".".join(cL[:jj])
                         if ecId not in linD:
                             linD[ecId] = [(depthL[ii], idL[ii], nmL[ii]) for ii in range(jj)]
 
                 except Exception as e:
-                    logger.error("cL %r cParent %r scParent %r sscParent %r val %r" % (cL, cParent, scParent, sscParent, val))
-                    logger.error("d is %r" % (d))
-                    logger.error("Failing with %s" % str(e))
+                    logger.error("cL %r cParent %r scParent %r sscParent %r val %r", cL, cParent, scParent, sscParent, val)
+                    logger.error("d is %r", dD)
+                    logger.error("Failing with %s", str(e))
         #
         # strip 0 placeholders
         #
         rD = {}
         for ky in classD:
-            ff = [t for t in ky.split('.') if t != '0']
-            rD['.'.join(ff)] = classD[ky]
+            ff = [t for t in ky.split(".") if t != "0"]
+            rD[".".join(ff)] = classD[ky]
 
         #
-        enzD = {"class": rD, 'lineage': linD}
+        enzD = {"class": rD, "lineage": linD}
         return enzD
 
     def __exportTreeNodeList(self, enzD):
@@ -260,22 +258,22 @@ class EnzymeDatabaseUtils(object):
         #
         pL = []
         pD = {}
-        for ecId in enzD['class']:
-            ff = ecId.split('.')
+        for ecId in enzD["class"]:
+            ff = ecId.split(".")
             if len(ff) == 1:
                 pEcId = None
                 pL.append(ecId)
             else:
-                pEcId = '.'.join(ff[:-1])
-            logger.debug("ecId %s parent %s" % (ecId, pEcId))
+                pEcId = ".".join(ff[:-1])
+            logger.debug("ecId %s parent %s", ecId, pEcId)
             pD[ecId] = pEcId
         #
-        logger.info("enzD %d pD %d" % (len(enzD['class']), len(pD)))
+        logger.info("enzD %d pD %d", len(enzD["class"]), len(pD))
         cD = {}
         for cEcId, pEcId in pD.items():
             cD.setdefault(pEcId, []).append(cEcId)
         #
-        logger.info("cD %d" % len(cD))
+        logger.info("cD %d", len(cD))
         #
         idL = []
         for rootId in sorted(pL):
@@ -285,7 +283,7 @@ class EnzymeDatabaseUtils(object):
                 ecId = queue.popleft()
                 idL.append(ecId)
                 if ecId not in cD:
-                    logger.debug("No children for ecId %s" % ecId)
+                    logger.debug("No children for ecId %s", ecId)
                     continue
                 for childId in cD[ecId]:
                     if childId not in visited:
@@ -294,17 +292,17 @@ class EnzymeDatabaseUtils(object):
         #
         dL = []
         for ecId in idL:
-            displayName = enzD['class'][ecId]
+            displayName = enzD["class"][ecId]
             pEcId = pD[ecId]
 
-            lL = [t[1] for t in enzD['lineage'][ecId]]
+            lL = [t[1] for t in enzD["lineage"][ecId]]
 
             #
             if pEcId is None:
-                d = {'id': ecId, 'name': displayName, 'depth': 0}
+                dD = {"id": ecId, "name": displayName, "depth": 0}
             else:
-                d = {'id': ecId, 'name': displayName, 'parents': [pEcId], 'depth': len(lL) - 1}
-            dL.append(d)
+                dD = {"id": ecId, "name": displayName, "parents": [pEcId], "depth": len(lL) - 1}
+            dL.append(dD)
 
         return dL
 
@@ -321,21 +319,21 @@ class EnzymeDatabaseUtils(object):
         """
         rD = {}
         for el in xrt.getroot():
-            logger.debug("-- Element tag %r name %r" % (el.tag, el.attrib['name']))
+            logger.debug("-- Element tag %r name %r", el.tag, el.attrib["name"])
             # rD.setdefault(el.tag, []).append(q)
             #
             for ch in el:
-                logger.debug("-- --> child element tag %r attrib %r" % (ch.tag, ch.attrib['name']))
+                logger.debug("-- --> child element tag %r attrib %r", ch.tag, ch.attrib["name"])
                 #
-                if ch.tag == 'table_data' and ch.attrib['name'] in ['class', 'entry']:
+                if ch.tag == "table_data" and ch.attrib["name"] in ["class", "entry"]:
                     dL = self.__getTableData(ch)
-                    rD[ch.attrib['name']] = dL
+                    rD[ch.attrib["name"]] = dL
 
                 # for gch in ch:
                 #    logger.debug("-- -- --> grand child element tag %r attrib count %r" % (gch.tag, len(gch.attrib)))
                 #    for ggch in gch:
                 #        logger.debug("-- -- --> grand child element tag %r attrib %r" % (ggch.tag, ggch.attrib['name']))
-                    # add parent cardinal attributes
+                # add parent cardinal attributes
         return rD
         #
 
@@ -359,46 +357,46 @@ class EnzymeDatabaseUtils(object):
                 'field' {'name': 'last_change'}
         """
         dL = []
-        if el.tag != 'table_data':
+        if el.tag != "table_data":
             return dL
         for ch in el:
-            if ch.tag == 'row':
-                d = {}
+            if ch.tag == "row":
+                dD = {}
                 for gch in ch:
-                    if gch.tag == 'field':
-                        nm = gch.attrib['name']
+                    if gch.tag == "field":
+                        nm = gch.attrib["name"]
                         val = gch.text
-                        d[nm] = val
-                        logger.debug(" Field %s val %r" % (nm, val))
+                        dD[nm] = val
+                        logger.debug(" Field %s val %r", nm, val)
                 #
-                dL.append(copy.copy(d))
+                dL.append(copy.copy(dD))
         return dL
 
     def __stripMarkup(self, text):
         try:
-            tS = text.replace("&#151;", "-").replace("&amp;#151;", "-").replace(u'â€”', "-")
-            self.__bs = BeautifulSoup(tS, features="lxml")
-            return self.__bs.get_text()
+            tS = text.replace("&#151;", "-").replace("&amp;#151;", "-").replace(u"â€”", "-")
+            bs = BeautifulSoup(tS, features="lxml")
+            return bs.get_text()
         except Exception as e:
-            logger.exception("Failing for %r with %s" % (text, str(e)))
-        return ''
+            logger.exception("Failing for %r with %s", text, str(e))
+        return ""
 
     def __parse(self, filePath):
         """ Parse the input XML data file and return ElementTree root element.
         """
         tree = []
-        if filePath[-3:] == '.gz':
-            with gzip.open(filePath, mode='rb') as ifh:
-                logger.debug('Parsing %s', filePath)
-                t = time.time()
+        if filePath[-3:] == ".gz":
+            with gzip.open(filePath, mode="rb") as ifh:
+                logger.debug("Parsing %s", filePath)
+                tV = time.time()
                 tree = ET.parse(ifh)
-                logger.debug('Parsed %s %.2f seconds' % (filePath, time.time() - t))
+                logger.debug("Parsed %s %.2f seconds", filePath, time.time() - tV)
         else:
-            with open(filePath, mode='rb') as ifh:
-                logger.debug('Parsing %s', filePath)
-                t = time.time()
+            with open(filePath, mode="rb") as ifh:
+                logger.debug("Parsing %s", filePath)
+                tV = time.time()
                 tree = ET.parse(ifh)
-                logger.debug('Parsed %s in %.2f seconds' % (filePath, time.time() - t))
+                logger.debug("Parsed %s in %.2f seconds", filePath, time.time() - tV)
         return tree
 
     # -
@@ -413,24 +411,24 @@ class EnzymeDatabaseUtils(object):
 
         for el in xrt.getroot():
             pEl = el.tag.replace(ns, "")
-            logger.info("-- %r %r" % (pEl, el.attrib))
+            logger.info("-- %r %r", pEl, el.attrib)
             for ch in el:
                 chEl = ch.tag.replace(ns, "")
-                logger.info("-- -->  %r %r" % (chEl, ch.attrib))
-                if ch.text is not None and not len(ch.text):
-                    logger.info("-- -->  %s" % ch.text)
+                logger.info("-- -->  %r %r", chEl, ch.attrib)
+                if ch.text is not None and ch.text:
+                    logger.info("-- -->  %s", ch.text)
                 for gch in ch:
                     gchEl = gch.tag.replace(ns, "")
-                    logger.info("-- -- -->  %r %r" % (gchEl, gch.attrib))
-                    if gch.text is not None and not len(gch.text):
-                        logger.info("-- -- -->  %s" % gch.text)
+                    logger.info("-- -- -->  %r %r", gchEl, gch.attrib)
+                    if gch.text is not None and gch.text:
+                        logger.info("-- -- -->  %s", gch.text)
                     for ggch in gch:
                         ggchEl = ggch.tag.replace(ns, "")
-                        logger.info("-- -- -- -->  %r %r" % (ggchEl, ggch.attrib))
-                        if ggch.text is not None and not len(ggch.text):
-                            logger.info("-- -- -- -->  %s" % ggch.text)
+                        logger.info("-- -- -- -->  %r %r", ggchEl, ggch.attrib)
+                        if ggch.text is not None and ggch.text:
+                            logger.info("-- -- -- -->  %s", ggch.text)
                         for gggch in ggch:
                             gggchEl = gggch.tag.replace(ns, "")
-                            logger.info("-- -- -- -- -->  %r %r" % (gggchEl, gggch.attrib))
-                            if gggch.text is not None and not len(gggch.text):
-                                logger.info("-- -- -- -- -->  %s" % gggch.text)
+                            logger.info("-- -- -- -- -->  %r %r", gggchEl, gggch.attrib)
+                            if gggch.text is not None and gggch.text:
+                                logger.info("-- -- -- -- -->  %s", gggch.text)
