@@ -1,6 +1,6 @@
 # RCSB Python Enzyme Classification Data Utilities
 
-[![Build Status](https://dev.azure.com/jdwestbrook/jdwestbrook/_apis/build/status/rcsb.py-rcsb_utils_ec?branchName=master)](https://dev.azure.com/jdwestbrook/jdwestbrook/_build/latest?definitionId=11&branchName=master)
+[![Build Status](https://dev.azure.com/rcsb/RCSB%20PDB%20Python%20Projects/_apis/build/status/rcsb.py-rcsb_utils_ec?branchName=master)](https://dev.azure.com/rcsb/RCSB%20PDB%20Python%20Projects/_build/latest?definitionId=3&branchName=master)
 
 ## Introduction
 
