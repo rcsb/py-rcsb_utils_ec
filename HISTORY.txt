@@ -4,6 +4,5 @@
  10-Apr-2019 V0.12 suppress verbose logging
  17-Apr-2019 V0.13 adjust parent node attributes in node list
  24-Jun-2019 V0.14 update development workflow
-
-
-
+ 14-Aug-2019 V0.15 improve cache management
+ 29-Aug-2019 V0.16 add module EnzymeDatabaseProvider()

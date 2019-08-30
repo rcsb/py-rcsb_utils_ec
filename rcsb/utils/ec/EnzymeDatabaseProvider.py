@@ -1,7 +1,7 @@
 ##
 # -*- coding: utf-8 -*-
 #
-# File:    EnzymeDatabaseUtils.py
+# File:    EnzymeDatabaseProvider.py
 # Author:  J. Westbrook
 # Date:    24-Jan-2019
 # Version: 0.001
@@ -17,25 +17,18 @@ and returning lineage details.
 
 import collections
 import copy
-import gzip
 import logging
 import os
-import time
 
 from bs4 import BeautifulSoup
 
 from rcsb.utils.io.FileUtil import FileUtil
 from rcsb.utils.io.MarshalUtil import MarshalUtil
 
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
-
 logger = logging.getLogger(__name__)
 
 
-class EnzymeDatabaseUtils(object):
+class EnzymeDatabaseProvider(object):
     """Various utilities for extracting data Enzyme database export data files
        and returning lineage details.
     """
@@ -45,13 +38,18 @@ class EnzymeDatabaseUtils(object):
         urlTarget = kwargs.get("urlTarget", "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
         enzymeDirPath = kwargs.get("enzymeDirPath", ".")
         useCache = kwargs.get("useCache", True)
-        clearCache = kwargs.get("clearCache", False)
         enzymeDataFileName = kwargs.get("enzymeDataFileName", "enzyme-data.json")
 
         self.__debug = False
         #
         self.__mU = MarshalUtil(workPath=enzymeDirPath)
-        self.__enzD = self.__reload(urlTarget, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache, clearCache=clearCache)
+        self.__enzD = self.__reload(urlTarget, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache)
+
+    def testCache(self):
+        logger.info("Length class dict %d", len(self.__enzD["class"]))
+        if len(self.__enzD["class"]) > 7600:
+            return True
+        return False
 
     def getClass(self, ecId):
         try:
@@ -71,7 +69,7 @@ class EnzymeDatabaseUtils(object):
         treeL = self.__exportTreeNodeList(self.__enzD)
         return treeL
 
-    def __reload(self, urlTarget, dirPath, enzymeDataFileName, useCache=True, clearCache=False):
+    def __reload(self, urlTarget, dirPath, enzymeDataFileName, useCache=True):
         """ Reload input XML database dump file and return data transformed lineage data objects.
 '
         Returns:
@@ -79,18 +77,19 @@ class EnzymeDatabaseUtils(object):
         """
         enzD = {}
         #
+        mU = MarshalUtil()
         fU = FileUtil()
         fn = fU.getFileName(urlTarget)
         xmlFilePath = os.path.join(dirPath, fn)
         enzymeDataPath = os.path.join(dirPath, enzymeDataFileName)
+        self.__mU.mkdir(dirPath)
         #
-        #
-        if clearCache:
-            try:
-                os.remove(xmlFilePath)
-                os.remove(enzymeDataPath)
-            except Exception:
-                pass
+        if not useCache:
+            for fp in [xmlFilePath, enzymeDataPath]:
+                try:
+                    os.remove(fp)
+                except Exception:
+                    pass
         #
         if useCache and fU.exists(enzymeDataPath):
             enzD = self.__mU.doImport(enzymeDataPath, fmt="json")
@@ -102,7 +101,7 @@ class EnzymeDatabaseUtils(object):
                 logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
                 ok = fU.get(urlTarget, xmlFilePath)
             if ok:
-                xrt = self.__parse(xmlFilePath)
+                xrt = mU.doImport(xmlFilePath, fmt="xml")
                 if self.__debug:
                     self.__traverse(xrt, ns="")
                 rD = self.__extract(xrt)
@@ -380,24 +379,6 @@ class EnzymeDatabaseUtils(object):
         except Exception as e:
             logger.exception("Failing for %r with %s", text, str(e))
         return ""
-
-    def __parse(self, filePath):
-        """ Parse the input XML data file and return ElementTree root element.
-        """
-        tree = []
-        if filePath[-3:] == ".gz":
-            with gzip.open(filePath, mode="rb") as ifh:
-                logger.debug("Parsing %s", filePath)
-                tV = time.time()
-                tree = ET.parse(ifh)
-                logger.debug("Parsed %s %.2f seconds", filePath, time.time() - tV)
-        else:
-            with open(filePath, mode="rb") as ifh:
-                logger.debug("Parsing %s", filePath)
-                tV = time.time()
-                tree = ET.parse(ifh)
-                logger.debug("Parsed %s in %.2f seconds", filePath, time.time() - tV)
-        return tree
 
     # -
     def __traverse(self, xrt, ns):

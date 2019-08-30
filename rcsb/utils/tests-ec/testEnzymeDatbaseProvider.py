@@ -1,5 +1,5 @@
 ##
-# File:    EnzymeDatabaseUtilsTests.py
+# File:    EnzymeDatabaseProviderTests.py
 # Author:  J. Westbrook
 # Date:    3-Feb-2019
 # Version: 0.001
@@ -24,7 +24,7 @@ import os
 import shutil
 import unittest
 
-from rcsb.utils.ec.EnzymeDatabaseUtils import EnzymeDatabaseUtils
+from rcsb.utils.ec.EnzymeDatabaseProvider import EnzymeDatabaseProvider
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 TOPDIR = os.path.dirname(os.path.dirname(HERE))
@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s]-%(mo
 logger = logging.getLogger()
 
 
-class EnzymeDatabaseUtilsTests(unittest.TestCase):
+class EnzymeDatabaseProviderTests(unittest.TestCase):
     def setUp(self):
         self.__dirPath = os.path.join(os.path.dirname(TOPDIR), "rcsb", "mock-data")
         self.__workPath = os.path.join(HERE, "test-output")
@@ -50,7 +50,7 @@ class EnzymeDatabaseUtilsTests(unittest.TestCase):
     def testReloadEnzymeDatabase1(self):
         """ Test load from source
         """
-        edbu = EnzymeDatabaseUtils(enzymeDirPath=self.__workPath, useCache=True)
+        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=True)
         ecId = "1.2.3.4"
         cl = edbu.getClass(ecId)
         self.assertEqual(cl, "oxalate oxidase")
@@ -62,7 +62,7 @@ class EnzymeDatabaseUtilsTests(unittest.TestCase):
     def testReloadEnzymeDatabase2(self):
         """ Test load from cache
         """
-        edbu = EnzymeDatabaseUtils(enzymeDirPath=self.__workPath, useCache=True)
+        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=True)
         ecId = "1.2.3.4"
         cl = edbu.getClass(ecId)
         self.assertEqual(cl, "oxalate oxidase")
@@ -76,8 +76,8 @@ class EnzymeDatabaseUtilsTests(unittest.TestCase):
 
 def readEnzymeDatabase():
     suiteSelect = unittest.TestSuite()
-    suiteSelect.addTest(EnzymeDatabaseUtilsTests("testReloadEnzymeDatabase1"))
-    suiteSelect.addTest(EnzymeDatabaseUtilsTests("testReloadEnzymeDatabase2"))
+    suiteSelect.addTest(EnzymeDatabaseProviderTests("testReloadEnzymeDatabase1"))
+    suiteSelect.addTest(EnzymeDatabaseProviderTests("testReloadEnzymeDatabase2"))
     return suiteSelect
 
 
