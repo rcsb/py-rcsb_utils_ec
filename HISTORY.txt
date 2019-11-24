@@ -7,3 +7,4 @@
  14-Aug-2019 V0.15 improve cache management
  29-Aug-2019 V0.16 add module EnzymeDatabaseProvider()
  23-Nov-2019 V0.17 Move pipeline to py38
+ 24-Nov-2019 V0.18 add normalize() and exists() methods

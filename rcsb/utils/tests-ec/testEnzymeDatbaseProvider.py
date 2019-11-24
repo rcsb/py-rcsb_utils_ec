@@ -58,6 +58,14 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         linL = edbu.getLineage("1.2.3.4")
         self.assertEqual(len(linL), 4)
         logger.debug("ecId %s lineage (%d) %r", ecId, len(linL), linL)
+        #
+        idTupL = [("1.-.-.-", "1"), ("1.-", "1"), ("1.2.-.-", "1.2"), ("1.2.3.-", "1.2.3"), ("1.2..", "1.2")]
+        for idIn, idOut in idTupL:
+            tId = edbu.normalize(idIn)
+            self.assertEqual(tId, idOut)
+            linL = edbu.getLineage(tId)
+            self.assertGreaterEqual(len(linL), 1)
+        #
 
     def testReloadEnzymeDatabase2(self):
         """ Test load from cache
@@ -72,6 +80,12 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         logger.debug("ecId %s lineage (%d) %r", ecId, len(linL), linL)
         treeL = edbu.getTreeNodeList()
         logger.info("treeL length is %d", len(treeL))
+        ecId = "5.6.2.3"
+        linL = edbu.getLineage(ecId)
+        self.assertEqual(linL, None)
+        ecId = "7.6.2.16"
+        cl = edbu.getClass(ecId)
+        self.assertEqual(cl, "ABC-type putrescine transporter")
 
 
 def readEnzymeDatabase():

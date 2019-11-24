@@ -51,6 +51,34 @@ class EnzymeDatabaseProvider(object):
             return True
         return False
 
+    def exists(self, ecId):
+        try:
+            return ecId in self.__enzD["class"]
+        except Exception:
+            return False
+
+    def normalize(self, ecId):
+        """Normalize the input class identifier removing any ambiguity markers.
+
+        Args:
+            ecId (str): EC class identifier
+
+        Returns:
+            (str) : normalized EC identifier
+        """
+        retId = None
+        try:
+            oL = []
+            tvL = ecId.strip().split(".")
+            for tv in tvL:
+                if not tv.isdigit():
+                    break
+                oL.append(tv)
+            retId = ".".join(oL)
+        except Exception as e:
+            logger.exception("Failing normalizing %r with %s", ecId, str(e))
+        return retId
+
     def getClass(self, ecId):
         try:
             return self.__enzD["class"][ecId]
