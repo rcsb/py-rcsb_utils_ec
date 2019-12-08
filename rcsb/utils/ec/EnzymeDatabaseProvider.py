@@ -51,6 +51,18 @@ class EnzymeDatabaseProvider(object):
             return True
         return False
 
+    def replaced(self, ecId):
+        nS = hS = None
+        try:
+            nS = self.__enzD["replaced"][ecId]["note"]
+        except Exception:
+            pass
+        try:
+            hS = self.__enzD["replaced"][ecId]["history"]
+        except Exception:
+            pass
+        return nS, hS
+
     def exists(self, ecId):
         try:
             return ecId in self.__enzD["class"]
@@ -179,9 +191,29 @@ class EnzymeDatabaseProvider(object):
             dictionary[ec_id] = {'name_list': ... , 'id_list': ... 'depth_list': ... }
 
         """
+        replacedD = {}
         linD = {}
         cD = {}
         classD = {}
+        #
+        # list_of_words = your_string.split()
+        # next_word = list_of_words[list_of_words.index(your_search_word) + 1]
+        #
+        if "hist" in rD:
+            for dD in rD["hist"]:
+                ecId = dD["ec_num"]
+                ts1 = dD["note"] if "note" in dD and dD["note"] else None
+                if ts1:
+                    replacedD[ecId] = {"note": ts1}
+                ts2 = dD["history"] if "history" in dD and dD["history"] else None
+                if ts2:
+                    replacedD[ecId] = {"history": ts2}
+
+                if ts1 and any(xS in ts1 for xS in [" Now ", " transferred "]) and ("EC " in ts1):
+                    logger.debug("%s note is %r", ecId, ts1)
+                if ts2 and any(xS in ts2 for xS in [" Now ", " transferred "]) and ("EC " in ts2):
+                    logger.debug("%s hist is %r", ecId, ts2)
+
         #
         if "class" in rD:
             for dD in rD["class"]:
@@ -275,7 +307,7 @@ class EnzymeDatabaseProvider(object):
             rD[".".join(ff)] = classD[ky]
 
         #
-        enzD = {"class": rD, "lineage": linD}
+        enzD = {"class": rD, "lineage": linD, "replaced": replacedD}
         return enzD
 
     def __exportTreeNodeList(self, enzD):
@@ -352,7 +384,7 @@ class EnzymeDatabaseProvider(object):
             for ch in el:
                 logger.debug("-- --> child element tag %r attrib %r", ch.tag, ch.attrib["name"])
                 #
-                if ch.tag == "table_data" and ch.attrib["name"] in ["class", "entry"]:
+                if ch.tag == "table_data" and ch.attrib["name"] in ["class", "entry", "hist"]:
                     dL = self.__getTableData(ch)
                     rD[ch.attrib["name"]] = dL
 

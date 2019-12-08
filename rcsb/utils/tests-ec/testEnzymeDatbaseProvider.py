@@ -43,9 +43,49 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         #
         if os.path.exists(os.path.join(self.__workPath, "enzyme-data.json")):
             os.remove(os.path.join(self.__workPath, "enzyme-data.json"))
+        # missing EC id's Dec 2019.
+        self.__ecIdMissing = [
+            "1.1.99.17",
+            "1.11.11.1",
+            "1.13.1.1",
+            "1.14.10.1",
+            "1.14.112",
+            "1.6.99.10",
+            "2.1.5.15",
+            "2.1.6.16",
+            "2.1.6.18",
+            "2.1.7.127",
+            "2.2.2.30",
+            "2.4.22.28",
+            "3.1.2.37",
+            "3.1.33.1",
+            "3.1.4.8",
+            "3.12.2.1",
+            "3.14.17.1",
+            "3.4.12.2",
+            "3.4.2.3",
+            "3.4.34.-",
+            "3.6.1.32",
+            "3.6.1.34",
+            "3.6.1.36",
+            "3.6.1.38",
+            "4.7.1.4",
+            "5.3.1.10",
+            "5.4.11.99",
+            "5.4.11.99",
+            "5.6.2.3",
+        ]
 
     def tearDown(self):
         pass
+
+    def testReplacedEnzymeDatabase1(self):
+        """ Test history notes for EC class replacement.
+        """
+        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=True)
+        for ecId in self.__ecIdMissing:
+            nS, hS = edbu.replaced(ecId)
+            logger.debug("ecId %r %r %r", ecId, nS, hS)
 
     def testReloadEnzymeDatabase1(self):
         """ Test load from source
