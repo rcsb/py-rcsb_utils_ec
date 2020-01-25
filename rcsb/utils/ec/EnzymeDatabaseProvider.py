@@ -36,6 +36,8 @@ class EnzymeDatabaseProvider(object):
     def __init__(self, **kwargs):
         #
         urlTarget = kwargs.get("urlTarget", "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
+        urlTargetFallback = "https://github.com/rcsb/py-rcsb_exdb_assets/raw/master/fall_back/enzyme-data.xml.gz"
+
         enzymeDirPath = kwargs.get("enzymeDirPath", ".")
         useCache = kwargs.get("useCache", True)
         enzymeDataFileName = kwargs.get("enzymeDataFileName", "enzyme-data.json")
@@ -43,7 +45,7 @@ class EnzymeDatabaseProvider(object):
         self.__debug = False
         #
         self.__mU = MarshalUtil(workPath=enzymeDirPath)
-        self.__enzD = self.__reload(urlTarget, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache)
+        self.__enzD = self.__reload(urlTarget, urlTargetFallback, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache)
 
     def testCache(self):
         logger.info("Length class dict %d", len(self.__enzD["class"]))
@@ -109,7 +111,7 @@ class EnzymeDatabaseProvider(object):
         treeL = self.__exportTreeNodeList(self.__enzD)
         return treeL
 
-    def __reload(self, urlTarget, dirPath, enzymeDataFileName, useCache=True):
+    def __reload(self, urlTarget, urlTargetFallback, dirPath, enzymeDataFileName, useCache=True):
         """ Reload input XML database dump file and return data transformed lineage data objects.
 '
         Returns:
@@ -140,6 +142,10 @@ class EnzymeDatabaseProvider(object):
             else:
                 logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
                 ok = fU.get(urlTarget, xmlFilePath)
+                logger.info("Enzyme data fetch status is %r", ok)
+                if not ok:
+                    ok = fU.get(urlTargetFallback, xmlFilePath)
+                    logger.info("Enzyme data fallback fetch status is %r", ok)
             if ok:
                 xrt = mU.doImport(xmlFilePath, fmt="xml")
                 if self.__debug:

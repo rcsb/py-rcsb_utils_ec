@@ -82,7 +82,7 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
     def testReplacedEnzymeDatabase1(self):
         """ Test history notes for EC class replacement.
         """
-        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=True)
+        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=False)
         for ecId in self.__ecIdMissing:
             nS, hS = edbu.replaced(ecId)
             logger.debug("ecId %r %r %r", ecId, nS, hS)
