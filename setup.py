@@ -42,7 +42,7 @@ setup(
     ),
     entry_points={"console_scripts": []},
     #
-    install_requires=["rcsb.utils.io >= 0.32", "beautifulsoup4", "lxml"],
+    install_requires=["rcsb.utils.io >= 0.53", "beautifulsoup4", "lxml"],
     packages=find_packages(exclude=["rcsb.mock-data", "rcsb.utils.tests-ec", "rcsb.utils.tests-*", "tests.*"]),
     package_data={
         # If any package contains *.md or *.rst ...  files, include them:

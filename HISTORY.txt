@@ -10,3 +10,4 @@
  24-Nov-2019 V0.18 add normalize() and exists() methods
   8-Dec-2019 V0.19 parse history records looking for EC replacements
  25-Jan-2020 V0.20 add fallback data resource
+  3-Feb-2020 V0.21 update dependencies
