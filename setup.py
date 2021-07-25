@@ -18,11 +18,19 @@ with open("rcsb/utils/ec/__init__.py", "r") as fd:
 if not version:
     raise RuntimeError("Cannot find version information")
 
+# Load packages from requirements*.txt
+with open("requirements.txt", "r") as ifh:
+    packagesRequired = [ln.strip() for ln in ifh.readlines()]
+
+with open("README.md", "r") as ifh:
+    longDescription = ifh.read()
+
 setup(
     name=thisPackage,
     version=version,
     description="RCSB Python utility classes for processing EC classification data",
-    long_description="See:  README.md",
+    long_description_content_type="text/markdown",
+    long_description=longDescription,
     author="John Westbrook",
     author_email="john.westbrook@rcsb.org",
     url="https://github.com/rcsb/py-rcsb_utils_ec",
@@ -37,12 +45,11 @@ setup(
         "Programming Language :: Python",
         # "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.9",
     ),
     entry_points={"console_scripts": []},
     #
-    install_requires=["rcsb.utils.io >= 0.53", "beautifulsoup4", "lxml"],
+    install_requires=packagesRequired,
     packages=find_packages(exclude=["rcsb.mock-data", "rcsb.utils.tests-ec", "rcsb.utils.tests-*", "tests.*"]),
     package_data={
         # If any package contains *.md or *.rst ...  files, include them:

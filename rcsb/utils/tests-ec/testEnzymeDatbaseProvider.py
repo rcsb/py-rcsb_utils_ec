@@ -21,7 +21,6 @@ __license__ = "Apache 2.0"
 
 import logging
 import os
-import shutil
 import unittest
 
 from rcsb.utils.ec.EnzymeDatabaseProvider import EnzymeDatabaseProvider
@@ -36,13 +35,8 @@ logger = logging.getLogger()
 class EnzymeDatabaseProviderTests(unittest.TestCase):
     def setUp(self):
         self.__dirPath = os.path.join(os.path.dirname(TOPDIR), "rcsb", "mock-data")
-        self.__workPath = os.path.join(HERE, "test-output")
-        # Maintain local copy of data file as url data source is unreliable.
-        self.__ecFilePath = os.path.join(HERE, "test-data", "enzyme-data.xml.gz")
-        shutil.copyfile(self.__ecFilePath, os.path.join(self.__workPath, "enzyme-data.xml.gz"))
+        self.__cachePath = os.path.join(HERE, "test-output", "CACHE")
         #
-        if os.path.exists(os.path.join(self.__workPath, "enzyme-data.json")):
-            os.remove(os.path.join(self.__workPath, "enzyme-data.json"))
         # missing EC id's Dec 2019.
         self.__ecIdMissing = [
             "1.1.99.17",
@@ -79,18 +73,11 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def testReplacedEnzymeDatabase1(self):
-        """ Test history notes for EC class replacement.
-        """
-        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=False)
-        for ecId in self.__ecIdMissing:
-            nS, hS = edbu.replaced(ecId)
-            logger.debug("ecId %r %r %r", ecId, nS, hS)
-
     def testReloadEnzymeDatabase1(self):
-        """ Test load from source
-        """
-        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=True)
+        """Test load from source"""
+        edbu = EnzymeDatabaseProvider(cachePath=self.__cachePath, useCache=False)
+        ok = edbu.testCache()
+        self.assertTrue(ok)
         ecId = "1.2.3.4"
         cl = edbu.getClass(ecId)
         self.assertEqual(cl, "oxalate oxidase")
@@ -108,9 +95,10 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         #
 
     def testReloadEnzymeDatabase2(self):
-        """ Test load from cache
-        """
-        edbu = EnzymeDatabaseProvider(enzymeDirPath=self.__workPath, useCache=True)
+        """Test load from cache"""
+        edbu = EnzymeDatabaseProvider(cachePath=self.__cachePath, useCache=True)
+        ok = edbu.testCache()
+        self.assertTrue(ok)
         ecId = "1.2.3.4"
         cl = edbu.getClass(ecId)
         self.assertEqual(cl, "oxalate oxidase")
@@ -126,6 +114,13 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         ecId = "7.6.2.16"
         cl = edbu.getClass(ecId)
         self.assertEqual(cl, "ABC-type putrescine transporter")
+
+    def testReplacedEnzymeDatabase1(self):
+        """Test history notes for EC class replacement."""
+        edbu = EnzymeDatabaseProvider(cachePath=self.__cachePath, useCache=True)
+        for ecId in self.__ecIdMissing:
+            nS, hS = edbu.replaced(ecId)
+            logger.debug("ecId %r %r %r", ecId, nS, hS)
 
 
 def readEnzymeDatabase():

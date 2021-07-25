@@ -1,13 +1,11 @@
 ##
-# -*- coding: utf-8 -*-
-#
 # File:    EnzymeDatabaseProvider.py
 # Author:  J. Westbrook
 # Date:    24-Jan-2019
 # Version: 0.001
 #
 # Update:
-#
+# 21-Jul-2021 jdw  Make this provider a subclass of StashableBase
 #
 ##
 """
@@ -24,21 +22,29 @@ from bs4 import BeautifulSoup
 
 from rcsb.utils.io.FileUtil import FileUtil
 from rcsb.utils.io.MarshalUtil import MarshalUtil
+from rcsb.utils.io.StashableBase import StashableBase
 
 logger = logging.getLogger(__name__)
 
 
-class EnzymeDatabaseProvider(object):
+class EnzymeDatabaseProvider(StashableBase):
     """Various utilities for extracting data Enzyme database export data files
-       and returning lineage details.
+    and returning lineage details.
     """
 
     def __init__(self, **kwargs):
+        dirName = "ec"
+        if "cachePath" in kwargs:
+            cachePath = os.path.abspath(kwargs.get("cachePath", None))
+            enzymeDirPath = os.path.join(cachePath, dirName)
+        else:
+            enzymeDirPath = kwargs.get("enzymeDirPath", ".")
+            cachePath, dirName = os.path.split(os.path.abspath(enzymeDirPath))
+        super(EnzymeDatabaseProvider, self).__init__(cachePath, [dirName])
         #
         urlTarget = kwargs.get("urlTarget", "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
         urlTargetFallback = "https://github.com/rcsb/py-rcsb_exdb_assets/raw/master/fall_back/enzyme-data.xml.gz"
 
-        enzymeDirPath = kwargs.get("enzymeDirPath", ".")
         useCache = kwargs.get("useCache", True)
         enzymeDataFileName = kwargs.get("enzymeDataFileName", "enzyme-data.json")
 
@@ -48,8 +54,8 @@ class EnzymeDatabaseProvider(object):
         self.__enzD = self.__reload(urlTarget, urlTargetFallback, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache)
 
     def testCache(self):
-        logger.info("Length class dict %d", len(self.__enzD["class"]))
-        if len(self.__enzD["class"]) > 7600:
+        logger.info("Length class dict %d", len(self.__enzD["class"]) if "class" in self.__enzD else 0)
+        if "class" in self.__enzD and len(self.__enzD["class"]) > 7600:
             return True
         return False
 
@@ -112,10 +118,10 @@ class EnzymeDatabaseProvider(object):
         return treeL
 
     def __reload(self, urlTarget, urlTargetFallback, dirPath, enzymeDataFileName, useCache=True):
-        """ Reload input XML database dump file and return data transformed lineage data objects.
-'
-        Returns:
-            dictionary[ec_id] = {'name_list': ... , 'id_list': ... 'depth_list': ... }
+        """Reload input XML database dump file and return data transformed lineage data objects.
+        '
+                Returns:
+                    dictionary[ec_id] = {'name_list': ... , 'id_list': ... 'depth_list': ... }
         """
         enzD = {}
         #
@@ -135,7 +141,7 @@ class EnzymeDatabaseProvider(object):
         #
         if useCache and fU.exists(enzymeDataPath):
             enzD = self.__mU.doImport(enzymeDataPath, fmt="json")
-        else:
+        elif not useCache:
             if useCache and fU.exists(xmlFilePath):
                 logger.info("Using an existing resource file %s", xmlFilePath)
                 ok = True
@@ -156,7 +162,7 @@ class EnzymeDatabaseProvider(object):
         return enzD
 
     def __build(self, rD):
-        """  Build the list of ancestory classifiers for each leaf classifier.
+        """Build the list of ancestor classifiers for each leaf classifier.
 
         Source enzyme database exported data has the following organization:
 
@@ -317,8 +323,7 @@ class EnzymeDatabaseProvider(object):
         return enzD
 
     def __exportTreeNodeList(self, enzD):
-        """
-        """
+        """ """
         # create parent dictionary
         #
         pL = []
@@ -372,7 +377,7 @@ class EnzymeDatabaseProvider(object):
         return dL
 
     def __extract(self, xrt):
-        """ Extract data from the input document and return a dictionary
+        """Extract data from the input document and return a dictionary
             of objects containing rows of dictionaries with attribute naming.
 
         Args:
@@ -403,23 +408,23 @@ class EnzymeDatabaseProvider(object):
         #
 
     def __getTableData(self, el):
-        """ Parse table data sections:
+        """Parse table data sections:
 
-           Example --
+        Example --
 
-             'table_data' {'name': 'cite'}
-                'row' {}
-                'field' {'name': 'cite_key'}
-                'field' {'name': 'ec_num'}
-                'field' {'name': 'ref_num'}
-                'field' {'name': 'acc_no'}
-                'field' {'name': 'last_change'}
-                'row' {}
-                'field' {'name': 'cite_key'}
-                'field' {'name': 'ec_num'}
-                'field' {'name': 'ref_num'}
-                'field' {'name': 'acc_no'}
-                'field' {'name': 'last_change'}
+          'table_data' {'name': 'cite'}
+             'row' {}
+             'field' {'name': 'cite_key'}
+             'field' {'name': 'ec_num'}
+             'field' {'name': 'ref_num'}
+             'field' {'name': 'acc_no'}
+             'field' {'name': 'last_change'}
+             'row' {}
+             'field' {'name': 'cite_key'}
+             'field' {'name': 'ec_num'}
+             'field' {'name': 'ref_num'}
+             'field' {'name': 'acc_no'}
+             'field' {'name': 'last_change'}
         """
         dL = []
         if el.tag != "table_data":
@@ -448,7 +453,7 @@ class EnzymeDatabaseProvider(object):
 
     # -
     def __traverse(self, xrt, ns):
-        """ Internal routine to traverse the dom covering/logging all elements and attributes.
+        """Internal routine to traverse the dom covering/logging all elements and attributes.
 
         Args:
             xrt (object): ElementTree root element

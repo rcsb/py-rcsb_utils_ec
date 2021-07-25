@@ -11,3 +11,4 @@
   8-Dec-2019 V0.19 parse history records looking for EC replacements
  25-Jan-2020 V0.20 add fallback data resource
   3-Feb-2020 V0.21 update dependencies
+ 25-Jul-2021 V0.22 Make EnzymeDatabaseProvider a subclass of StashableBase, update instal and pipeline

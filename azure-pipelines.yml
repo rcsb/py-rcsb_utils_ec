@@ -5,49 +5,41 @@
 #       9-Jul-2019 jdw add publish jobs
 #      21-Jul-2019 jdw update to Py38
 #       3-Feb-2020 jdw disable Py27
+#      21-Jul-2021 jdw upgrade to py39
 #
 name: $(BuildDefinitionName)_$(Date:yyyyMMdd)$(Rev:.rr)
 
 trigger:
-- master
+  - master
 
 pr:
-- master
+  - master
 
 schedules:
-- cron: "0 12 * * 0"
-  displayName: Weekly Sunday build
-  branches:
-    include:
-    - master
-  always: true
+  - cron: "0 12 * * 0"
+    displayName: Weekly Sunday build
+    branches:
+      include:
+        - master
+    always: true
 
 jobs:
   - template: azure-template-tox-job.yml
-    parameters: {tox: 'format_pep8', python: '3.8', os: 'linux'}
+    parameters: { tox: "format_pep8", python: "3.9", os: "linux" }
   - template: azure-template-tox-job.yml
-    parameters: {tox: 'lint_pylint', python: '3.8', os: 'linux'}
+    parameters: { tox: "lint_pylint", python: "3.9", os: "linux" }
   - template: azure-template-tox-job.yml
-    parameters: {tox: 'test_coverage', python: '3.8', os: 'linux'}
+    parameters: { tox: "test_coverage", python: "3.9", os: "linux" }
     #
   - template: azure-template-tox-job.yml
-    parameters: {tox: 'py38', python: '3.8', os: 'linux'}
-  #- template: azure-template-tox-job.yml
-  #  parameters: {tox: 'py27', python: '2.7', os: 'linux'}
-  #
+    parameters: { tox: "py39", python: "3.9", os: "linux" }
   - template: azure-template-tox-job.yml
-    parameters: {tox: 'py38', python: '3.8', os: 'macos'}
+    parameters: { tox: "py39", python: "3.9", os: "macos" }
   #- template: azure-template-tox-job.yml
   #  parameters: {tox: 'py27', python: '2.7', os: 'macos'}
   #
-  - template: azure-template-publish-job.yml
-    parameters: {tox: 'py38', python: '3.8', os: 'macos'}
-  - template: azure-template-publish-job.yml
-    parameters: {tox: 'py38', python: '3.8', os: 'linux'}
-  #
   #- template: azure-template-publish-job.yml
-  #  parameters: {tox: 'py27', python: '2.7', os: 'macos'}
-  #- template: azure-template-publish-job.yml
-  #  parameters: {tox: 'py27', python: '2.7', os: 'linux'}
+  #  parameters: {tox: 'py39', python: '3.9', os: 'macos'}
+  - template: azure-template-publish-job.yml
+    parameters: { tox: "py39", python: "3.9", os: "linux" }
   #
-
