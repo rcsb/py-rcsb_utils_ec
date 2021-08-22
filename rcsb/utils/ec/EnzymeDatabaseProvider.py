@@ -444,7 +444,7 @@ class EnzymeDatabaseProvider(StashableBase):
 
     def __stripMarkup(self, text):
         try:
-            tS = text.replace("&#151;", "-").replace("&amp;#151;", "-").replace(u"â€”", "-")
+            tS = text.replace("&#151;", "-").replace("&amp;#151;", "-").replace("â€”", "-")
             bs = BeautifulSoup(tS, features="lxml")
             return bs.get_text()
         except Exception as e:
