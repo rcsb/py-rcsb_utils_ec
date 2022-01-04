@@ -12,3 +12,4 @@
  25-Jan-2020 V0.20 add fallback data resource
   3-Feb-2020 V0.21 update dependencies
  25-Jul-2021 V0.22 Make EnzymeDatabaseProvider a subclass of StashableBase, update instal and pipeline
+  4-Jan-2022 V0.23 Update list of missing ecIds to reflect latest version of source data
