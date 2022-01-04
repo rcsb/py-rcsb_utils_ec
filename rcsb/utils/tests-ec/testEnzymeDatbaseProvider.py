@@ -5,7 +5,7 @@
 # Version: 0.001
 #
 # Update:
-#
+#  4-Jan-2022 dwp  Remove 5.6.2.3 from list of missing ecIds and test case
 #
 ##
 """
@@ -66,8 +66,6 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
             "4.7.1.4",
             "5.3.1.10",
             "5.4.11.99",
-            "5.4.11.99",
-            "5.6.2.3",
         ]
 
     def tearDown(self):
@@ -108,7 +106,7 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         logger.debug("ecId %s lineage (%d) %r", ecId, len(linL), linL)
         treeL = edbu.getTreeNodeList()
         logger.info("treeL length is %d", len(treeL))
-        ecId = "5.6.2.3"
+        ecId = "5.4.11.99"
         linL = edbu.getLineage(ecId)
         self.assertEqual(linL, None)
         ecId = "7.6.2.16"
