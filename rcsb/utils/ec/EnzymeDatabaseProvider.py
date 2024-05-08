@@ -6,6 +6,7 @@
 #
 # Update:
 # 21-Jul-2021 jdw  Make this provider a subclass of StashableBase
+#  8-May-2024 dwp  Add additional data quality check to file download (in case data file is empty)
 #
 ##
 """
@@ -127,6 +128,7 @@ class EnzymeDatabaseProvider(StashableBase):
         #
         mU = MarshalUtil()
         fU = FileUtil()
+        ok, okFetch = False, False
         fn = fU.getFileName(urlTarget)
         xmlFilePath = os.path.join(dirPath, fn)
         enzymeDataPath = os.path.join(dirPath, enzymeDataFileName)
@@ -147,11 +149,14 @@ class EnzymeDatabaseProvider(StashableBase):
                 ok = True
             else:
                 logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
-                ok = fU.get(urlTarget, xmlFilePath)
-                logger.info("Enzyme data fetch status is %r", ok)
+                okFetch = fU.get(urlTarget, xmlFilePath)
+                ok = fU.size(xmlFilePath) > 10000 and okFetch
+                logger.info("Enzyme data fetch status is %r, data integrity status is %r", okFetch, ok)
                 if not ok:
-                    ok = fU.get(urlTargetFallback, xmlFilePath)
-                    logger.info("Enzyme data fallback fetch status is %r", ok)
+                    logger.info("Fetching fallback url %s to resource file %s", urlTargetFallback, xmlFilePath)
+                    okFetch = fU.get(urlTargetFallback, xmlFilePath)
+                    ok = fU.size(xmlFilePath) > 10000 and okFetch
+                    logger.info("Enzyme data fallback fetch status is %r, data integrity status is %r", okFetch, ok)
             if ok:
                 xrt = mU.doImport(xmlFilePath, fmt="xml")
                 if self.__debug:

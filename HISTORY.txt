@@ -14,3 +14,4 @@
  25-Jul-2021 V0.22 Make EnzymeDatabaseProvider a subclass of StashableBase, update instal and pipeline
   4-Jan-2022 V0.23 Update list of missing ecIds to reflect latest version of source data
   9-Jan-2023 V0.24 Configuration changes to support tox 4
+  8-May-2024 V0.25 Add additional data quality check to file download
