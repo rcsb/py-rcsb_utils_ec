@@ -15,3 +15,4 @@
   4-Jan-2022 V0.23 Update list of missing ecIds to reflect latest version of source data
   9-Jan-2023 V0.24 Configuration changes to support tox 4
   8-May-2024 V0.25 Add additional data quality check to file download
+  9-Dec-2024 V0.26 Update Azure pipelines to use latest macOS, Ubuntu, and python 3.10
