@@ -1,3 +1,0 @@
-rcsb.utils.io >= 1.15
-beautifulsoup4
-lxml
