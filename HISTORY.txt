@@ -16,3 +16,4 @@
   9-Jan-2023 V0.24 Configuration changes to support tox 4
   8-May-2024 V0.25 Add additional data quality check to file download
   9-Dec-2024 V0.26 Update Azure pipelines to use latest macOS, Ubuntu, and python 3.10
+  8-Dec-2025 V0.27 Switch from setuptools to hatch build system and update pipelines to Python 3.13
