@@ -9,7 +9,9 @@
 #  8-May-2024 dwp  Add additional data quality check to file download (in case data file is empty)
 # 20-Oct-2026 dwp  Send an identifying User-Agent when fetching the enzyme data (the source rejects the default
 #                  python-requests User-Agent with HTTP 400); log use of the fallback file as a warning, and log
-#                  the latest entry change date of the data used; allow overriding the fallback URL
+#                  the latest entry change date of the data used; allow overriding the fallback URL; log an error
+#                  if the fallback fetch also fails; remove an unreachable reuse-existing-XML branch (left over
+#                  from the 21-Jul-2021 change)
 #
 ##
 """
@@ -149,20 +151,18 @@ class EnzymeDatabaseProvider(StashableBase):
         if useCache and fU.exists(enzymeDataPath):
             enzD = self.__mU.doImport(enzymeDataPath, fmt="json")
         elif not useCache:
-            if useCache and fU.exists(xmlFilePath):
-                logger.info("Using an existing resource file %s", xmlFilePath)
-                ok = True
-            else:
-                logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
-                okFetch = fU.get(urlTarget, xmlFilePath, headers=requestHeaders)
+            logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
+            okFetch = fU.get(urlTarget, xmlFilePath, headers=requestHeaders)
+            ok = fU.size(xmlFilePath) > 10000 and okFetch
+            logger.info("Enzyme data fetch status is %r, data integrity status is %r", okFetch, ok)
+            if not ok:
+                useFallback = True
+                logger.warning("Enzyme data fetch failed for %s, using fallback url %s (may be out of date)", urlTarget, urlTargetFallback)
+                okFetch = fU.get(urlTargetFallback, xmlFilePath)
                 ok = fU.size(xmlFilePath) > 10000 and okFetch
-                logger.info("Enzyme data fetch status is %r, data integrity status is %r", okFetch, ok)
+                logger.info("Enzyme data fallback fetch status is %r, data integrity status is %r", okFetch, ok)
                 if not ok:
-                    useFallback = True
-                    logger.warning("Enzyme data fetch failed for %s, using fallback url %s (may be out of date)", urlTarget, urlTargetFallback)
-                    okFetch = fU.get(urlTargetFallback, xmlFilePath)
-                    ok = fU.size(xmlFilePath) > 10000 and okFetch
-                    logger.info("Enzyme data fallback fetch status is %r, data integrity status is %r", okFetch, ok)
+                    logger.error("Enzyme data fallback fetch also failed for %s; no enzyme data loaded", urlTargetFallback)
             if ok:
                 xrt = mU.doImport(xmlFilePath, fmt="xml")
                 if self.__debug:

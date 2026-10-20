@@ -19,4 +19,5 @@
   8-Dec-2025 V0.27 Switch from setuptools to hatch build system and update pipelines to Python 3.13
  20-Oct-2026 V0.28 Send an identifying User-Agent when fetching the enzyme data (the source now rejects the default
                    python-requests User-Agent); log fallback use as a warning with the data's latest change date;
+                   log an error if the fallback fetch also fails; remove an unreachable branch in __reload();
                    require rcsb.utils.io >= 1.56
