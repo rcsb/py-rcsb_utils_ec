@@ -7,6 +7,9 @@
 # Update:
 # 21-Jul-2021 jdw  Make this provider a subclass of StashableBase
 #  8-May-2024 dwp  Add additional data quality check to file download (in case data file is empty)
+# 20-Oct-2026 dwp  Send an identifying User-Agent when fetching the enzyme data (the source rejects the default
+#                  python-requests User-Agent with HTTP 400); log use of the fallback file as a warning, and log
+#                  the latest entry change date of the data used; allow overriding the fallback URL
 #
 ##
 """
@@ -44,7 +47,9 @@ class EnzymeDatabaseProvider(StashableBase):
         super(EnzymeDatabaseProvider, self).__init__(cachePath, [dirName])
         #
         urlTarget = kwargs.get("urlTarget", "https://www.enzyme-database.org/downloads/enzyme-data.xml.gz")
-        urlTargetFallback = "https://github.com/rcsb/py-rcsb_exdb_assets/raw/master/fall_back/enzyme-data.xml.gz"
+        urlTargetFallback = kwargs.get("urlTargetFallback", "https://github.com/rcsb/py-rcsb_exdb_assets/raw/master/fall_back/enzyme-data.xml.gz")
+        # The source rejects the default python-requests User-Agent (HTTP 400), so identify the client explicitly
+        requestHeaders = kwargs.get("requestHeaders", {"User-Agent": "RCSB-PDB-ETL (+https://www.rcsb.org)"})
 
         useCache = kwargs.get("useCache", True)
         enzymeDataFileName = kwargs.get("enzymeDataFileName", "enzyme-data.json")
@@ -52,7 +57,7 @@ class EnzymeDatabaseProvider(StashableBase):
         self.__debug = False
         #
         self.__mU = MarshalUtil(workPath=enzymeDirPath)
-        self.__enzD = self.__reload(urlTarget, urlTargetFallback, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache)
+        self.__enzD = self.__reload(urlTarget, urlTargetFallback, enzymeDirPath, enzymeDataFileName=enzymeDataFileName, useCache=useCache, requestHeaders=requestHeaders)
 
     def testCache(self):
         logger.info("Length class dict %d", len(self.__enzD["class"]) if "class" in self.__enzD else 0)
@@ -118,7 +123,7 @@ class EnzymeDatabaseProvider(StashableBase):
         treeL = self.__exportTreeNodeList(self.__enzD)
         return treeL
 
-    def __reload(self, urlTarget, urlTargetFallback, dirPath, enzymeDataFileName, useCache=True):
+    def __reload(self, urlTarget, urlTargetFallback, dirPath, enzymeDataFileName, useCache=True, requestHeaders=None):
         """Reload input XML database dump file and return data transformed lineage data objects.
         '
                 Returns:
@@ -128,7 +133,7 @@ class EnzymeDatabaseProvider(StashableBase):
         #
         mU = MarshalUtil()
         fU = FileUtil()
-        ok, okFetch = False, False
+        ok, okFetch, useFallback = False, False, False
         fn = fU.getFileName(urlTarget)
         xmlFilePath = os.path.join(dirPath, fn)
         enzymeDataPath = os.path.join(dirPath, enzymeDataFileName)
@@ -149,11 +154,12 @@ class EnzymeDatabaseProvider(StashableBase):
                 ok = True
             else:
                 logger.info("Fetching url %s to resource file %s", urlTarget, xmlFilePath)
-                okFetch = fU.get(urlTarget, xmlFilePath)
+                okFetch = fU.get(urlTarget, xmlFilePath, headers=requestHeaders)
                 ok = fU.size(xmlFilePath) > 10000 and okFetch
                 logger.info("Enzyme data fetch status is %r, data integrity status is %r", okFetch, ok)
                 if not ok:
-                    logger.info("Fetching fallback url %s to resource file %s", urlTargetFallback, xmlFilePath)
+                    useFallback = True
+                    logger.warning("Enzyme data fetch failed for %s, using fallback url %s (may be out of date)", urlTarget, urlTargetFallback)
                     okFetch = fU.get(urlTargetFallback, xmlFilePath)
                     ok = fU.size(xmlFilePath) > 10000 and okFetch
                     logger.info("Enzyme data fallback fetch status is %r, data integrity status is %r", okFetch, ok)
@@ -162,6 +168,11 @@ class EnzymeDatabaseProvider(StashableBase):
                 if self.__debug:
                     self.__traverse(xrt, ns="")
                 rD = self.__extract(xrt)
+                lastChange = self.__getLatestChange(rD)
+                if useFallback:
+                    logger.warning("Using fallback enzyme data with latest entry change %s", lastChange)
+                else:
+                    logger.info("Using enzyme data with latest entry change %s", lastChange)
                 enzD = self.__build(rD)
                 ok = self.__mU.doExport(enzymeDataPath, enzD, fmt="json", indent=3)
         return enzD
@@ -411,6 +422,14 @@ class EnzymeDatabaseProvider(StashableBase):
                 # add parent cardinal attributes
         return rD
         #
+
+    def __getLatestChange(self, rD):
+        """Return the latest 'last_change' timestamp of the extracted class, entry and history records (or None)."""
+        try:
+            return max((dD["last_change"] for dL in rD.values() for dD in dL if dD.get("last_change")), default=None)
+        except Exception as e:
+            logger.error("Failing with %s", str(e))
+        return None
 
     def __getTableData(self, el):
         """Parse table data sections:
