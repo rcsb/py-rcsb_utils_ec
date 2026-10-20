@@ -6,6 +6,7 @@
 #
 # Update:
 #  4-Jan-2022 dwp  Remove 5.6.2.3 from list of missing ecIds and test case
+# 20-Oct-2026 dwp  Fail the load-from-source test if the fallback data is used; add a fallback test
 #
 ##
 """
@@ -72,8 +73,9 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         pass
 
     def testReloadEnzymeDatabase1(self):
-        """Test load from source"""
-        edbu = EnzymeDatabaseProvider(cachePath=self.__cachePath, useCache=False)
+        """Test load from source (fails if the primary source is unavailable and the fallback data is used)"""
+        with self.assertNoLogs("rcsb.utils.ec.EnzymeDatabaseProvider", level="WARNING"):
+            edbu = EnzymeDatabaseProvider(cachePath=self.__cachePath, useCache=False)
         ok = edbu.testCache()
         self.assertTrue(ok)
         ecId = "1.2.3.4"
@@ -113,6 +115,15 @@ class EnzymeDatabaseProviderTests(unittest.TestCase):
         cl = edbu.getClass(ecId)
         self.assertEqual(cl, "ABC-type putrescine transporter")
 
+    def testReloadEnzymeDatabaseFallback(self):
+        """Test load from the fallback source when the primary source is unavailable"""
+        cachePath = os.path.join(HERE, "test-output", "CACHE-fallback")
+        with self.assertLogs("rcsb.utils.ec.EnzymeDatabaseProvider", level="WARNING") as cm:
+            edbu = EnzymeDatabaseProvider(cachePath=cachePath, useCache=False, urlTarget=os.path.join(HERE, "test-output", "does-not-exist.xml.gz"))
+        self.assertTrue(any("Using fallback enzyme data" in msg for msg in cm.output))
+        self.assertTrue(edbu.testCache())
+        self.assertEqual(edbu.getClass("1.2.3.4"), "oxalate oxidase")
+
     def testReplacedEnzymeDatabase1(self):
         """Test history notes for EC class replacement."""
         edbu = EnzymeDatabaseProvider(cachePath=self.__cachePath, useCache=True)
@@ -125,6 +136,7 @@ def readEnzymeDatabase():
     suiteSelect = unittest.TestSuite()
     suiteSelect.addTest(EnzymeDatabaseProviderTests("testReloadEnzymeDatabase1"))
     suiteSelect.addTest(EnzymeDatabaseProviderTests("testReloadEnzymeDatabase2"))
+    suiteSelect.addTest(EnzymeDatabaseProviderTests("testReloadEnzymeDatabaseFallback"))
     return suiteSelect
 
 
